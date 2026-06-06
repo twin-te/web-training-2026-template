@@ -1,23 +1,44 @@
 import { type FormEvent, useEffect, useState } from "react";
 
-type User = {
+type Message = {
   id: number;
-  name: string;
-  email: string;
+  message: string;
+  userName: string;
   createdAt: string;
 };
 
 export default function App() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [health, setHealth] = useState<{
+    ok: boolean;
+    body: unknown | null;
+  }>({ ok: false, body: null });
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [userName, setUserName] = useState("");
+  const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const checkHealth = async () => {
     try {
-      const res = await fetch("/api/users");
+      const res = await fetch("/api/health");
+      if (res.ok) {
+        setHealth({ ok: true, body: await res.json() });
+      } else {
+        setHealth({ ok: false, body: null });
+      }
+    } catch {
+      setHealth({ ok: false, body: null });
+    }
+  };
+
+  const loadMessages = async () => {
+    try {
+      const res = await fetch("/api/messages");
+      if (res.status === 404) {
+        setError("404");
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setUsers(await res.json());
+      setMessages(await res.json());
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "fetch failed");
@@ -25,60 +46,123 @@ export default function App() {
   };
 
   useEffect(() => {
-    load();
+    checkHealth();
+    loadMessages();
   }, []);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const res = await fetch("/api/users", {
+    const res = await fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email }),
+      body: JSON.stringify({ message, userName }),
     });
     if (!res.ok) {
       setError(`POST failed: ${res.status}`);
       return;
     }
-    setName("");
-    setEmail("");
-    load();
+    setMessage("");
+    loadMessages();
   };
 
   return (
     <main style={{ maxWidth: 640, margin: "2rem auto", padding: "0 1rem" }}>
       <h1>Web Training 2026</h1>
-      <p>backend に繋がっているかの動作確認用テンプレートです。</p>
 
-      <form
-        onSubmit={submit}
-        style={{ display: "flex", gap: "0.5rem", margin: "1rem 0" }}
+      <section
+        style={{
+          border: "1px solid #ccc",
+          borderRadius: 4,
+          padding: "0.75rem 1rem",
+          marginBottom: "1.5rem",
+        }}
       >
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="name"
-          required
-        />
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          type="email"
-          placeholder="email"
-          required
-        />
-        <button type="submit">追加</button>
-      </form>
+        <h2 style={{ margin: "0 0 0.5rem" }}>サーバ状態</h2>
+        {health.ok ? (
+          <>
+            <pre style={{ margin: 0, fontSize: "0.875rem" }}>
+              {JSON.stringify(health.body, null, 2)}
+            </pre>
+            <p style={{ margin: "0.5rem 0 0", color: "green" }}>
+              健康に動いてそうです
+            </p>
+          </>
+        ) : (
+          <p style={{ margin: 0, color: "crimson" }}>
+            サーバに繋がっていません
+          </p>
+        )}
+      </section>
 
-      {error && <p style={{ color: "crimson" }}>error: {error}</p>}
+      <section>
+        <h2>掲示板</h2>
 
-      <h2>Users</h2>
-      <ul>
-        {users.map((u) => (
-          <li key={u.id}>
-            {u.name} ({u.email})
-          </li>
-        ))}
-      </ul>
+        <form
+          onSubmit={submit}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.5rem",
+            marginBottom: "1rem",
+          }}
+        >
+          <input
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            placeholder="名前"
+            required
+          />
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="メッセージ"
+            required
+            rows={3}
+            style={{
+              font: "inherit",
+              padding: "0.4rem 0.6rem",
+              resize: "vertical",
+            }}
+          />
+          <button type="submit" style={{ alignSelf: "flex-start" }}>
+            投稿
+          </button>
+        </form>
+
+        {error === "404" ? (
+          <p style={{ color: "#888" }}>まだサポートされていません</p>
+        ) : (
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {messages.length === 0 ? (
+              <li style={{ color: "#888" }}>まだメッセージはありません</li>
+            ) : (
+              messages.map((m) => (
+                <li
+                  key={m.id}
+                  style={{
+                    borderBottom: "1px solid #eee",
+                    padding: "0.75rem 0",
+                  }}
+                >
+                  <span style={{ fontWeight: "bold" }}>{m.userName}</span>
+                  <span
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#888",
+                      marginLeft: "0.5rem",
+                    }}
+                  >
+                    {new Date(m.createdAt).toLocaleString("ja-JP")}
+                  </span>
+                  <p style={{ margin: "0.25rem 0 0", whiteSpace: "pre-wrap" }}>
+                    {m.message}
+                  </p>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
