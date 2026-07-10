@@ -1,15 +1,15 @@
 # web-training-2026-template
 
-雙峰祭オンラインシステム開発班の研修テンプレート。
+Twin:te の研修テンプレート。
 
 ## 構成
 
 ```
-backend/   - Hono + Drizzle (MySQL) + Docker
+backend/   - Go + Echo + GORM (PostgreSQL) + Docker
 frontend/  - Vite + React + TypeScript
 ```
 
-それぞれ独立した npm プロジェクトです。詳細は各ディレクトリの README を参照。
+それぞれ独立したプロジェクトです。詳細は各ディレクトリの README を参照。
 
 ## クイックスタート
 
@@ -19,13 +19,14 @@ frontend/  - Vite + React + TypeScript
 
 ```bash
 cd backend
+cp .env.example .env
 docker compose up --build
-# 別ターミナルで初回だけ
-docker compose exec app npm run db:push
 ```
 
 - API: http://localhost:3000
-- phpMyAdmin: http://localhost:8080 (root / root)
+- Adminer (DB 閲覧): http://localhost:8080 (System: PostgreSQL / Server: db / User: app / Password: app / Database: app)
+
+データベースのテーブルはアプリ起動時に自動で作られます(GORM の AutoMigrate)。
 
 **frontend**
 

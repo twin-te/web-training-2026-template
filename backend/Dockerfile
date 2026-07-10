@@ -1,23 +1,21 @@
-FROM node:22-slim AS base
+FROM golang:1.26 AS base
 WORKDIR /app
 
 FROM base AS dev
-COPY package.json package-lock.json* ./
-RUN npm install
+RUN go install github.com/air-verse/air@latest
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
 EXPOSE 3000
-CMD ["npm", "run", "dev"]
+CMD ["air"]
 
 FROM base AS build
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
-RUN npm run build
+RUN CGO_ENABLED=0 go build -o /server .
 
-FROM node:22-slim AS prod
-WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
-COPY --from=build /app/dist ./dist
+FROM gcr.io/distroless/static-debian12 AS prod
+COPY --from=build /server /server
 EXPOSE 3000
-CMD ["node", "dist/index.js"]
+CMD ["/server"]

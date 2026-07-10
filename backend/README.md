@@ -1,74 +1,55 @@
 # backend
 
-Hono + Drizzle (MySQL) のバックエンドテンプレート。
+Go + Echo + GORM (PostgreSQL) のバックエンドテンプレート。
 
 ## スタック
 
-- TypeScript
-- [Hono](https://hono.dev/) (Node.js アダプタ)
-- [Drizzle ORM](https://orm.drizzle.team/) + `mysql2`
-- MySQL 8 / phpMyAdmin (docker compose)
+- Go
+- [Echo](https://echo.labstack.com/) v4
+- [GORM](https://gorm.io/) + PostgreSQL 16
+- [Adminer](https://www.adminer.org/) (DB をブラウザから覗ける、docker compose)
+- [air](https://github.com/air-verse/air) (ホットリロード、docker compose の dev target)
 
 ## 開発の始め方
 
-### 1. Docker でまるごと起動する
+`.env.example` をコピーして `.env` を作ってから、Docker でまるごと起動します。
 
 ```bash
+cp .env.example .env
 docker compose up --build
 ```
 
 - API: http://localhost:3000
-- phpMyAdmin: http://localhost:8080 （root / root）
+- Adminer: http://localhost:8080 (System: PostgreSQL / Server: db / User: app / Password: app / Database: app)
 
-初回はスキーマがまだ DB に反映されていないので、別ターミナルで:
+データベースのテーブルは、アプリ起動時に GORM の AutoMigrate がモデル定義から自動で作ります。
+マイグレーションコマンドを手で打つ必要はありません。
 
-```bash
-docker compose exec app npm run db:push
-```
-
-### 2. ローカル Node + Docker DB で起動する
-
-```bash
-docker compose up -d db phpmyadmin
-cp .env.example .env
-npm install
-npm run db:push
-npm run dev
-```
-
-## スクリプト
-
-| コマンド | 内容 |
-| --- | --- |
-| `npm run dev` | `tsx watch` で開発サーバ起動 |
-| `npm run build` | TypeScript を `dist/` にコンパイル |
-| `npm start` | コンパイル済み JS を起動 |
-| `npm run typecheck` | 型チェックのみ |
-| `npm run db:generate` | スキーマからマイグレーションを生成 |
-| `npm run db:push` | スキーマを DB にそのまま反映（開発用） |
-| `npm run db:migrate` | 生成済みマイグレーションを適用 |
-| `npm run db:studio` | Drizzle Studio を起動 |
+ソースコードを保存すると air が自動でビルドし直してくれます(ホットリロード)。
 
 ## ディレクトリ
 
 ```
-src/
-  index.ts        - Hono エントリポイント
-  db/
-    schema.ts     - Drizzle スキーマ
-    client.ts     - DB クライアント
-  routes/
-    users.ts      - サンプルルート
-drizzle.config.ts
+main.go            - エントリポイント (Echo の起動)
+api/
+  message.go       - /messages エンドポイントのハンドラ
+db/
+  db.go            - DB 接続 + AutoMigrate
+model/
+  message.go       - Message モデル (テーブル定義)
 Dockerfile
 docker-compose.yml
+.air.toml          - air (ホットリロード) の設定
 ```
 
 ## サンプル API
 
 ```bash
-curl http://localhost:3000/users
-curl -X POST http://localhost:3000/users \
+curl http://localhost:3000/health
+curl http://localhost:3000/messages
+curl -X POST http://localhost:3000/messages \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Alice","email":"alice@example.com"}'
+  -d '{"message":"こんにちは!","userName":"風吹けば名無し"}'
 ```
+
+(研修の Phase を進めるまでは、まだ実装されていないエンドポイントもあります)

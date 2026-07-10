@@ -1,0 +1,13 @@
+# air (https://github.com/air-verse/air) の設定ファイル。
+# ソースコードを保存すると自動でビルドし直してサーバを再起動してくれます。
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/main ."
+entrypoint = "./tmp/main"
+include_ext = ["go"]
+exclude_dir = ["tmp"]
+
+[log]
+main_only = true
